@@ -25,12 +25,34 @@ let persons = [
      }
 ]
 
+
+// get etusivu
 app.get('/', (request, response) => {
     response.send('<h1>Puhelinluettelo backend</h1>')
 })
 
+// get all
 app.get('/api/persons', (request, response) => {
     response.json(persons)
+})
+
+// get by id
+app.get('/api/persons/:id', (request, response) => {
+    const id = request.params.id
+    const person = persons.find(person => person.id === id)
+    
+    //jos id on olemassa 
+    if(person) {
+        response.json(person)
+    } else {
+        response.status(404).end()
+    }
+    
+})
+
+// get info page
+app.get('/info', (request, response) => {
+    response.send(`Phonebook has info for ${persons.length} people <br> ${new Date()}`)
 })
 
 const PORT = 3001
