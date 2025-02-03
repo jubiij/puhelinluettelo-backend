@@ -1,6 +1,9 @@
 const express = require('express')
 const app = express()
 const morgan = require('morgan')
+const cors = require('cors')
+
+app.use(cors())
 
 let persons = [
     {
@@ -68,6 +71,7 @@ app.delete('/api/persons/:id', (request, response) => {
 // POST
 app.post('/api/persons', (request, response) => {
     const person = request.body
+    console.log(request.body)
     
     // arvotaan luku 1-10000, joka annetaan id:nä
     const generateId = Math.floor(Math.random() * 10000)
