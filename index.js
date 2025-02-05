@@ -1,59 +1,35 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
+const Person = require('./modules/person')
 const morgan = require('morgan')
 const cors = require('cors')
 
 app.use(express.static('dist'))
 app.use(cors())
 
-let persons = [
-    {
-       id: "1",
-       name: "Arto Hellas",
-       number: "040-123456" 
-    },
-    {
-        id: "2",
-        name: "Ada Lovelace",
-        number: "39-44-5323523" 
-     },
-     {
-        id: "3",
-        name: "Dan Abramov",
-        number: "12-43-234345" 
-     },
-     {
-        id: "4",
-        name: "Mary Poppendieck",
-        number: "39-23-6423122" 
-     }
-]
 
 app.use(express.json())
 app.use(morgan('tiny'))
 
 
-// GET etusivu
+
 app.get('/', (request, response) => {
     response.send('<h1>Puhelinluettelo backend</h1>')
 })
 
 // GET all
 app.get('/api/persons', (request, response) => {
-    response.json(persons)
+    Person.find({}).then(persons => {
+        response.json(persons)
+    })
 })
 
 // GET by id
 app.get('/api/persons/:id', (request, response) => {
-    const id = request.params.id
-    const person = persons.find(person => person.id === id)
-    
-    //jos id on olemassa 
-    if(person) {
+    Person.findById(request.params.id).then(person => {
         response.json(person)
-    } else {
-        response.status(404).end()
-    }
+    })
 })
 
 // GET info page
@@ -71,45 +47,23 @@ app.delete('/api/persons/:id', (request, response) => {
 
 // POST
 app.post('/api/persons', (request, response) => {
-    const person = request.body
-    console.log(request.body)
+    const body = request.body
     
-    // arvotaan luku 1-10000, joka annetaan id:nä
-    const generateId = Math.floor(Math.random() * 10000)
-    person.id = String(generateId)
-
-    // katsotaan onko nimi olemassa persons taulukossa
-    const nameExists = persons.find(person => person.name.toLowerCase() === request.body.name.toLowerCase())
-    
-    // jos nimi on tyhjä error:
-    if (!person.name) {
-        return response.status(400).json({
-            error: 'name is missing'
-        })     
-    }
-    // jos numero on tyhjä error:
-    if (!person.number) {
-        return response.status(400).json({
-            error: 'number is missing'
-        })
-    }
-    // jos nimi on jo olemassa error:
-    if(nameExists) {
-        return response.status(400).json({
-            error:'name must be inique'
-        })
+    if (body.name === "" || body.number === "") {
+        return response.status(400).json({ error: 'name or number missing!'})
     }
 
-    // uusi taulukko jossa request.bodynä saatu henkilö
-    persons = persons.concat(person)
-    
-    console.log(generateId)
-    console.log(person)
-    
-    response.json(person)
+    const person = new Person({
+        name: body.name,
+        number: body.number,
+    })
+
+    person.save().then(savedPerson => {
+        response.json(savedPerson)
+    })
 })
-
-const PORT = process.env.PORT || 3001
+ 
+const PORT = process.env.PORT
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
