@@ -7,8 +7,6 @@ const cors = require('cors')
 
 app.use(express.static('dist'))
 app.use(cors())
-
-
 app.use(express.json())
 app.use(morgan('tiny'))
 
@@ -26,23 +24,30 @@ app.get('/api/persons', (request, response) => {
 })
 
 // GET by id
-app.get('/api/persons/:id', (request, response) => {
-    Person.findById(request.params.id).then(person => {
-        response.json(person)
+app.get('/api/persons/:id', (request, response, next) => {
+    Person.findById(request.params.id)
+        .then(person => {
+          if (person) {
+            response.json(person)
+          } else {
+            response.status(404).end()
+          }
     })
+    .catch(error => next(error))
 })
 
 // GET info page
 app.get('/info', (request, response) => {
-    response.send(`Phonebook has info for ${persons.length} people <br> ${new Date()}`)
+    response.send(`Phonebook has info for ${Person.length} people <br> ${new Date()}`)
 })
 
 // DELETE
-app.delete('/api/persons/:id', (request, response) => {
-    const id = request.params.id
-    persons = persons.filter(person => person.id !== id)
-
-    response.status(204).end()
+app.delete('/api/persons/:id', (request, response, next) => {
+   Person.findByIdAndDelete(request.params.id)
+    .then(result => {
+        response.status(204).end()
+    })
+    .catch(error => next(error))
 })
 
 // POST
@@ -62,7 +67,42 @@ app.post('/api/persons', (request, response) => {
         response.json(savedPerson)
     })
 })
- 
+
+app.put('/api/persons/:id', (request, response, next) => {
+    const body = request.body;
+    Person.findOneAndUpdate(
+      { name: body.name }, // etsitään mitä halutaan
+      { $set: { number: body.number } }, // päivitetään kenttä
+      { new: true } // Palautetaan päivitetty asiakirja
+    )
+      .then(updatedPerson => {
+        if (!updatedPerson) {
+          return response.status(404).json({ error: 'person not found' });
+        }
+        response.json(updatedPerson); // Lähetetään päivitetty asiakirja
+      })
+      .catch(error => next(error));
+  });
+const unknownEndpoint = (request, response) => {
+    response.status(404).send({ error: 'unknown endpoint' })
+  }
+  
+  // olemattomien osoitteiden käsittely
+app.use(unknownEndpoint) 
+
+const errorHandler = (error, request, response, next) => {
+    console.error(error.message)
+  
+    if (error.name === 'CastError') {
+      return response.status(400).send({ error: 'malformatted id' })
+    }
+  
+    next(error)
+  }
+
+  // virheellisten pyyntöjen käsittely
+  app.use(errorHandler)
+
 const PORT = process.env.PORT
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
